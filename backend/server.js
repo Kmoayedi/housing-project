@@ -7,7 +7,13 @@ require("dotenv").config();
 const { Pool } = require("pg");
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: [
+    "http://localhost:5000",
+    "https://housing-project-f3o2jcaj7-kamyab1313-4084s-projects.vercel.app/"
+  ]
+}));
+
 app.use(express.json());
 
 const pool = new Pool({
