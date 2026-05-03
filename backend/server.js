@@ -11,7 +11,7 @@ const app = express();
 app.use(cors({
   origin: [
     "http://localhost:3000",
-    "https://housing-project-self.vercel.app/"
+    "https://housing-project-self.vercel.app"
   ],
   methods: ["GET", "POST"],
   credentials: true
@@ -37,6 +37,10 @@ app.post("/register", async (req, res) => {
       return res.status(400).json({ message: "Bitte E-Mail und Passwort eingeben." });
     }
 
+    if (password.length < 8) {
+      return res.status(400).json({ message: "Das Passwort muss mindestens 8 Zeichen lang sein." });
+    }
+
     const hash = await bcrypt.hash(password, 10);
 
     await pool.query(
@@ -44,7 +48,7 @@ app.post("/register", async (req, res) => {
       [email, hash]
     );
 
-    res.json({ message: "Registrierung erfolgreich!" });
+    res.json({ message: "Registrierung erfolgreich! Du kannst dich jetzt einloggen." });
   } catch (err) {
     console.error("REGISTER ERROR:", err);
 
@@ -62,7 +66,7 @@ app.post("/login", async (req, res) => {
     const { email, password } = req.body;
 
     const result = await pool.query(
-      "SELECT * FROM users WHERE email=$1",
+      "SELECT id, email, password, city, max_price, rooms FROM users WHERE email=$1",
       [email]
     );
 
@@ -86,7 +90,13 @@ app.post("/login", async (req, res) => {
 
     res.json({
       message: "Login erfolgreich!",
-      token
+      token,
+      user: {
+        email: user.email,
+        city: user.city,
+        maxPrice: user.max_price,
+        rooms: user.rooms
+      }
     });
   } catch (err) {
     console.error("LOGIN ERROR:", err);
@@ -110,7 +120,10 @@ app.post("/search", async (req, res) => {
       [city, maxPrice, rooms, decoded.id]
     );
 
-    res.json({ message: "Suchprofil erfolgreich gespeichert!" });
+    res.json({
+      message: "Suchprofil erfolgreich gespeichert!",
+      search: { city, maxPrice, rooms }
+    });
   } catch (err) {
     console.error("SEARCH ERROR:", err);
     res.status(500).json({ message: "Fehler beim Speichern des Suchprofils." });

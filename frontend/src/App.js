@@ -11,6 +11,32 @@ function App() {
   const [maxPrice, setMaxPrice] = useState("");
   const [rooms, setRooms] = useState("");
   const [token, setToken] = useState("");
+  const [userEmail, setUserEmail] = useState("");
+  const [isDashboard, setIsDashboard] = useState(false);
+
+  const listings = [
+    {
+      title: "2-Zimmer-Wohnung nahe Innenstadt",
+      city: city || "Hannover",
+      price: maxPrice ? `${maxPrice - 80} €` : "820 €",
+      rooms: rooms || "2",
+      tag: "Sehr passend"
+    },
+    {
+      title: "Moderne Wohnung mit Balkon",
+      city: city || "Hannover",
+      price: maxPrice ? `${maxPrice - 30} €` : "950 €",
+      rooms: rooms || "3",
+      tag: "Neu entdeckt"
+    },
+    {
+      title: "Helle Wohnung in ruhiger Lage",
+      city: city || "Hannover",
+      price: maxPrice ? `${maxPrice} €` : "1.050 €",
+      rooms: rooms || "3",
+      tag: "Guter Preis"
+    }
+  ];
 
   const register = async () => {
     try {
@@ -40,7 +66,13 @@ function App() {
 
       if (data.token) {
         setToken(data.token);
-        alert(data.message || "Erfolgreich eingeloggt!");
+        setUserEmail(data.user?.email || email);
+
+        if (data.user?.city) setCity(data.user.city);
+        if (data.user?.maxPrice) setMaxPrice(data.user.maxPrice);
+        if (data.user?.rooms) setRooms(data.user.rooms);
+
+        setIsDashboard(true);
       } else {
         alert(data.message || "Login fehlgeschlagen.");
       }
@@ -70,6 +102,144 @@ function App() {
       alert("Suchprofil konnte nicht gespeichert werden.");
     }
   };
+
+  const logout = () => {
+    setToken("");
+    setIsDashboard(false);
+    setUserEmail("");
+  };
+
+  if (isDashboard) {
+    return (
+      <div className="page dashboard-page">
+        <nav className="navbar">
+          <div className="logo">WohnRadar</div>
+
+          <div className="nav-links">
+            <a href="#dashboard">Dashboard</a>
+            <a href="#treffer">Treffer</a>
+            <a href="#suche">Suchprofil</a>
+          </div>
+
+          <button onClick={logout} className="nav-button">Ausloggen</button>
+        </nav>
+
+        <main className="dashboard" id="dashboard">
+          <section className="dashboard-header">
+            <div>
+              <div className="badge">Persönliches Dashboard</div>
+              <h1>Willkommen zurück.</h1>
+              <p>
+                Dein Suchprofil ist aktiv. Hier siehst du deine Kriterien,
+                Beispiel-Treffer und die nächsten geplanten Funktionen.
+              </p>
+            </div>
+
+            <div className="profile-card">
+              <span>Account</span>
+              <strong>{userEmail}</strong>
+              <small>Status: aktiv</small>
+            </div>
+          </section>
+
+          <section className="dashboard-grid">
+            <div className="dashboard-card">
+              <span>Suchort</span>
+              <strong>{city || "Noch nicht festgelegt"}</strong>
+            </div>
+
+            <div className="dashboard-card">
+              <span>Budget</span>
+              <strong>{maxPrice ? `${maxPrice} €` : "Noch offen"}</strong>
+            </div>
+
+            <div className="dashboard-card">
+              <span>Zimmer</span>
+              <strong>{rooms || "Noch offen"}</strong>
+            </div>
+
+            <div className="dashboard-card highlight-card">
+              <span>Potenzielle Treffer</span>
+              <strong>3</strong>
+            </div>
+          </section>
+
+          <section className="dashboard-content">
+            <div className="panel" id="treffer">
+              <div className="panel-header">
+                <div>
+                  <h2>Neue Beispiel-Treffer</h2>
+                  <p>Später werden hier echte Immobilienangebote angezeigt.</p>
+                </div>
+                <span className="live-pill">Live vorbereitet</span>
+              </div>
+
+              <div className="listing-list">
+                {listings.map((item, index) => (
+                  <div className="listing-card" key={index}>
+                    <div>
+                      <span className="listing-tag">{item.tag}</span>
+                      <h3>{item.title}</h3>
+                      <p>{item.city} · {item.rooms} Zimmer · {item.price}</p>
+                    </div>
+                    <button>Merken</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="panel side-panel" id="suche">
+              <h2>Suchprofil bearbeiten</h2>
+              <p>Ändere deine Kriterien und speichere sie direkt in deiner Neon-Datenbank.</p>
+
+              <div className="form-group">
+                <input
+                  placeholder="Stadt, z. B. Hannover"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                />
+
+                <input
+                  type="number"
+                  placeholder="Maximale Miete / Preis"
+                  value={maxPrice}
+                  onChange={(e) => setMaxPrice(e.target.value)}
+                />
+
+                <input
+                  type="number"
+                  placeholder="Zimmeranzahl"
+                  value={rooms}
+                  onChange={(e) => setRooms(e.target.value)}
+                />
+
+                <button onClick={saveSearch} className="full-button">
+                  Änderungen speichern
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section className="features premium-features">
+            <div className="feature">
+              <h3>E-Mail Alerts</h3>
+              <p>Benachrichtigungen, sobald neue passende Angebote gefunden werden.</p>
+            </div>
+
+            <div className="feature">
+              <h3>Auto-Bewerbung</h3>
+              <p>Später kann der Nutzer Unterlagen hinterlegen und schneller reagieren.</p>
+            </div>
+
+            <div className="feature">
+              <h3>Fake-Check</h3>
+              <p>Verdächtige Inserate können markiert und bewertet werden.</p>
+            </div>
+          </section>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="page">
@@ -137,7 +307,7 @@ function App() {
 
             <input
               type="password"
-              placeholder="Passwort"
+              placeholder="Passwort, mindestens 8 Zeichen"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
@@ -200,10 +370,9 @@ function App() {
         </div>
 
         <div className="feature">
-          <h3>Bereit für Alerts</h3>
+          <h3>Persönliches Dashboard</h3>
           <p>
-            Als nächstes können E-Mail-Benachrichtigungen und echte Inserate
-            ergänzt werden.
+            Nach dem Login sieht jeder Nutzer sein eigenes Suchprofil und passende Treffer.
           </p>
         </div>
       </section>
