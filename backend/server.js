@@ -7,11 +7,14 @@ require("dotenv").config();
 const { Pool } = require("pg");
 
 const app = express();
+
 app.use(cors({
   origin: [
-    "http://localhost:5000",
-    "https://housing-project-f3o2jcaj7-kamyab1313-4084s-projects.vercel.app/"
-  ]
+    "http://localhost:3000",
+    "https://housing-project-self.vercel.app/"
+  ],
+  methods: ["GET", "POST"],
+  credentials: true
 }));
 
 app.use(express.json());
@@ -21,49 +24,101 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
+app.get("/", (req, res) => {
+  res.send("Backend läuft 🚀");
+});
+
 // REGISTER
 app.post("/register", async (req, res) => {
-  const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-  const hash = await bcrypt.hash(password, 10);
+    if (!email || !password) {
+      return res.status(400).json({ message: "Bitte E-Mail und Passwort eingeben." });
+    }
 
-  await pool.query(
-    "INSERT INTO users (email, password) VALUES ($1, $2)",
-    [email, hash]
-  );
+    const hash = await bcrypt.hash(password, 10);
 
-  res.json({ message: "User created" });
+    await pool.query(
+      "INSERT INTO users (email, password) VALUES ($1, $2)",
+      [email, hash]
+    );
+
+    res.json({ message: "Registrierung erfolgreich!" });
+  } catch (err) {
+    console.error("REGISTER ERROR:", err);
+
+    if (err.code === "23505") {
+      return res.status(400).json({ message: "Diese E-Mail ist bereits registriert." });
+    }
+
+    res.status(500).json({ message: "Fehler bei der Registrierung." });
+  }
 });
 
 // LOGIN
 app.post("/login", async (req, res) => {
-  const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-  const result = await pool.query("SELECT * FROM users WHERE email=$1", [email]);
-  const user = result.rows[0];
+    const result = await pool.query(
+      "SELECT * FROM users WHERE email=$1",
+      [email]
+    );
 
-  if (!user) return res.status(400).json("User not found");
+    const user = result.rows[0];
 
-  const valid = await bcrypt.compare(password, user.password);
-  if (!valid) return res.status(400).json("Wrong password");
+    if (!user) {
+      return res.status(400).json({ message: "Benutzer nicht gefunden." });
+    }
 
-  const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET);
+    const valid = await bcrypt.compare(password, user.password);
 
-  res.json({ token });
+    if (!valid) {
+      return res.status(400).json({ message: "Falsches Passwort." });
+    }
+
+    const token = jwt.sign(
+      { id: user.id },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    res.json({
+      message: "Login erfolgreich!",
+      token
+    });
+  } catch (err) {
+    console.error("LOGIN ERROR:", err);
+    res.status(500).json({ message: "Fehler beim Login." });
+  }
 });
 
 // SAVE SEARCH
 app.post("/search", async (req, res) => {
-  const { token, city, maxPrice, rooms } = req.body;
+  try {
+    const { token, city, maxPrice, rooms } = req.body;
 
-  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (!token) {
+      return res.status(401).json({ message: "Nicht eingeloggt." });
+    }
 
-  await pool.query(
-    "UPDATE users SET city=$1, max_price=$2, rooms=$3 WHERE id=$4",
-    [city, maxPrice, rooms, decoded.id]
-  );
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-  res.json({ message: "Search saved" });
+    await pool.query(
+      "UPDATE users SET city=$1, max_price=$2, rooms=$3 WHERE id=$4",
+      [city, maxPrice, rooms, decoded.id]
+    );
+
+    res.json({ message: "Suchprofil erfolgreich gespeichert!" });
+  } catch (err) {
+    console.error("SEARCH ERROR:", err);
+    res.status(500).json({ message: "Fehler beim Speichern des Suchprofils." });
+  }
 });
 
-app.listen(5000, () => console.log("Server läuft auf 5000"));
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, () => {
+  console.log(`Server läuft auf ${PORT}`);
+});
